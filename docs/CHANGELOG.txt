@@ -2,6 +2,15 @@
 Changes
 =======
 
+2.4.1
+-----
+
+- fixed bug in clear with request cache
+  2012-10-11 - jensens
+
+- fixed strange bug in locator by removing superfluos check.
+  2012-10-11 - jensens
+
 2.4
 ---
 
