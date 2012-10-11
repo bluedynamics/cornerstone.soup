@@ -1,0 +1,21 @@
+<configure xmlns="http://namespaces.zope.org/zope">
+  
+  <utility
+    name="mysoup"
+	factory=".env.MyCatalogFactory"
+	provides="cornerstone.soup.interfaces.ICatalogFactory"
+  />
+  
+  <utility
+    name="tingsoup"
+    factory=".env.TingCatalogFactory"
+    provides="cornerstone.soup.interfaces.ICatalogFactory"
+  />
+  
+  <utility
+    name="sortsoup"
+    factory=".env.SortCatalogFactory"
+    provides="cornerstone.soup.interfaces.ICatalogFactory"
+  />
+
+</configure>

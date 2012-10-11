@@ -1,0 +1,376 @@
+Create object which can store soup data,
+::
+
+    >>> from zope.interface import implements
+    >>> from zope.annotation.interfaces import IAttributeAnnotatable
+    >>> from cornerstone.soup.interfaces import ISoupAnnotatable
+    >>> from OFS.Folder import Folder
+    >>> class Site(Folder):
+    ...     implements(IAttributeAnnotatable, ISoupAnnotatable)
+    ...     REQUEST = dict()
+
+instanciate it,
+::
+
+    >>> site = Site()
+
+and query the soup named 'mysoup'.
+
+If soup data for given soup id is not present yet, i will be created
+transparently and annotated to ISoupAnnotatable.
+::
+
+    >>> from cornerstone.soup import getSoup
+    >>> soup = getSoup(site, 'mysoup')
+    >>> soup
+    <Soup at mysoup>
+
+Our catalog factory. You MUST provide an ICatalogFactory implementation for each
+soup. It must be registered as utility with desired soup id.
+::
+
+    >>> from zope.component import getUtility
+    >>> from cornerstone.soup.interfaces import ICatalogFactory
+    >>> catalogfactory = getUtility(ICatalogFactory, name='mysoup')
+    >>> catalogfactory
+    <cornerstone.soup.tests.env.MyCatalogFactory object at ...>
+
+    >>> catalogfactory()
+    <zope.catalog.catalog.Catalog object at ...>
+    
+Create a Record and add it to soup.
+::
+
+    >>> from cornerstone.soup import Record
+    >>> record = Record(user='user1',
+    ...                 text=u'foo bar baz',
+    ...                 keywords=[u'1', u'2', u'ü'])
+    >>> rid = soup.add(record)
+
+Check querying.
+::
+
+    >>> [r for r in soup.query(user='user1')]
+    [<Record at ...>]
+    
+    >>> [r for r in soup.query(user='nonexist')]
+    []
+
+FieldIndex special handling.
+::
+
+    >>> [r for r in soup.query(user=('user1', 'user1'))]
+    [<Record at ...>]
+
+Add some more Records.
+::
+
+    >>> rid = soup.add(Record(user='user1', text=u'foo bar bam', 
+    ...                       keywords=[u'1', u'3', u'4']))
+    >>> rid = soup.add(Record(user='user2', text=u'foo x y', 
+    ...                       keywords=[u'1', u'4', u'5']))
+    >>> u1records = [r for r in soup.query(user='user1')]
+    >>> u1records
+    [<Record at ...>, 
+    <Record at ...>]
+
+Change user attribute of one record.
+::
+
+    >>> u1records[0].data['user'] = 'user2'
+
+The query still returns the old result. The Record must be reindexed.
+::
+
+    >>> [r for r in soup.query(user='user1')]
+    [<Record at ...>, 
+    <Record at ...>]
+    
+    >>> soup.reindex([u1records[0]])
+    
+    >>> u1 = [r for r in soup.query(user='user1')]
+    >>> u1
+    [<Record at ...>]
+    
+    >>> u2 = [r for r in soup.query(user='user2')]
+    >>> u2
+    [<Record at ...>, 
+    <Record at ...>]
+
+Check Text index.
+::
+
+    >>> [r for r in soup.query(text='foo')]
+    [<Record at ...>, 
+    <Record at ...>, 
+    <Record at ...>]
+    
+    >>> [r for r in soup.query(text='bar')]
+    [<Record at ...>, 
+    <Record at ...>]
+    
+    >>> [r for r in soup.query(text='x')]
+    [<Record at ...>]
+    
+    >>> [r for r in soup.query(text='fo')]
+    []
+    
+Check keyword index.
+::
+
+    >>> [r for r in soup.query(keywords=['1'])]
+    [<Record at ...>, 
+    <Record at ...>, 
+    <Record at ...>]
+    
+    >>> [r for r in soup.query(keywords=[u'ü'])]
+    [<Record at ...>]
+
+You can reindex all records in soup at once.
+::
+
+    >>> all = [r for r in soup.data.values()]
+    >>> all = sorted(all, key=lambda x: x.user)
+    >>> all
+    [<Record at ...>, 
+    <Record at ...>, 
+    <Record at ...>]
+    
+    >>> all[-1].data['user'] = 'user3'
+    >>> soup.reindex()
+    >>> [r for r in soup.query(user='user3')]
+    [<Record at ...>]
+
+You can also rebuild the catalog. In this case the catalog factory is called
+again and the new catalog is used. Lets modify catalog of our catalog factory.
+Never do this in production evironments.
+::
+
+    >>> from zope.catalog.field import FieldIndex
+    >>> catalogfactory = getUtility(ICatalogFactory, name='mysoup')
+    >>> catalogfactory.catalog[u'name'] = FieldIndex(field_name='name',
+    ...                                   field_callable=False)
+    >>> catalogfactory.catalog[u'name']
+    <zope.catalog.field.FieldIndex object at ...>
+
+Set name attribute on some record data, reindex soup and check results.
+::
+
+    >>> all[0].data['name'] = 'name'
+    >>> all[1].data['name'] = 'name'
+    >>> all[2].data['name'] = 'name'
+    >>> soup.reindex()
+    >>> [r for r in soup.query(name='name')]
+    [<Record at ...>, 
+    <Record at ...>, 
+    <Record at ...>]
+    
+Delete records.
+::
+
+    >>> del soup[all[0]]
+    >>> [r for r in soup.query(name='name')]
+    [<Record at ...>, 
+    <Record at ...>]
+
+For huge expected results we can query LazyRecords. They return the real record
+on call.
+::
+
+    >>> lazy = [l for l in soup.lazy(name='name')]
+    >>> lazy
+    [<cornerstone.soup.soup.LazyRecord object at ...>, 
+    <cornerstone.soup.soup.LazyRecord object at ...>]
+    
+    >>> lazy[0]()
+    <Record at ...>
+
+    >>> soup = getSoup(site, u'mysoup')
+    >>> [r for r in soup.query(name='name')]
+    [<Record at ...>, 
+    <Record at ...>]
+
+Clear soup.
+::
+
+    >>> soup.clear()
+    >>> len(soup.data)
+    0
+
+Test StorageLocator. Create subfolders on Site
+::
+
+    >>> from OFS.Folder import manage_addFolder
+    >>> manage_addFolder(site, 'child')
+    >>> manage_addFolder(site['child'], 'sub')
+
+Make child folders IAttributeAnnotatable.
+::
+
+    >>> from zope.interface import alsoProvides
+    >>> alsoProvides(site['child'], IAttributeAnnotatable)
+    >>> alsoProvides(site['child']['sub'], IAttributeAnnotatable)
+
+Create StorageLocator.
+::
+
+    >>> from cornerstone.soup import StorageLocator
+    >>> locator = StorageLocator(site)
+
+Traverse to relative object.
+::
+
+    >>> locator.traverse('child')
+    <Folder at /child>
+    
+    >>> locator.traverse('child/sub')
+    <Folder at /child/sub>
+    
+    >>> locator.traverse('child/su')
+    Traceback (most recent call last):
+      ...
+    ValueError: Object at child/su does not exist.
+
+Lookup Storage by id.
+::
+
+    >>> locator.storage('mysoup')
+    <SoupData at >
+
+Check obj annotations.
+::
+
+    >>> from zope.annotation import IAnnotations
+    >>> IAnnotations(site)
+    {'mysoup': <SoupData at >}
+
+Now move storage of 'mysoup' to 'child/sub'.
+::
+
+    >>> locator.move('mysoup', 'child/sub')
+
+ISoupAnnotatable implementation now holds the path to obj where storage is
+annotated.
+::
+
+    >>> IAnnotations(site)
+    {'mysoup': 'child/sub'}
+    
+    >>> new_target = locator.traverse('child/sub')
+    
+    >>> locator.traverse('child/sub')
+    <Folder at /child/sub>
+    
+    >>> IAnnotations(locator.traverse('child/sub'))
+    {'mysoup': <SoupData at >}
+
+Move once more.
+::
+
+    >>> rid = soup.add(Record(user='user1', text=u'foo bar bam', 
+    ...                       keywords=[u'1', u'3', u'4']))
+    >>> rid = soup.add(Record(user='user2', text=u'foo x y', 
+    ...                       keywords=[u'1', u'4', u'5']))
+
+    >>> locator.move('mysoup', 'child')
+    >>> IAnnotations(site)
+    {'mysoup': 'child'}
+    
+    >>> locator.traverse('child')
+    <Folder at /child>
+    
+    >>> IAnnotations(locator.traverse('child'))
+    {'mysoup': <SoupData at >}
+    
+Check relocating.
+
+Make some folder with some soup.
+::
+
+    >>> from cornerstone.soup.soup import SoupData
+    >>> manage_addFolder(site, 'newlocation')
+    >>> alsoProvides(site['newlocation'], IAttributeAnnotatable)
+    >>> ann = IAnnotations(site['newlocation'])
+    >>> newsoup = SoupData()
+    >>> ann['mysoup'] = newsoup
+    
+Relocate
+::
+
+    >>> locator.relocate('mysoup', 'newlocation')    
+    >>> ann['mysoup'] is newsoup
+    True
+    
+    >>> getSoup(site, 'mysoup').storage is newsoup
+    True
+
+Check Txng using soup.
+::
+
+    >>> soup = getSoup(site, 'tingsoup')
+    >>> soup
+    <Soup at tingsoup>
+    
+    >>> id = soup.add(Record(foo='foo', bar='bar', baz='baz'))
+    >>> id = soup.add(Record(foo='foobar', bar='barbaz', baz='bazfoo'))
+    >>> id = soup.add(Record(foo='aaa', bar='barrrr', baz='ccc'))
+    
+    >>> query = {
+    ...     'query': u'bar::and(bar*)',
+    ...     'search_all_fields': True,
+    ... }
+    >>> [r.bar for r in soup.query(ting=query)]
+    ['bar', 'barbaz', 'barrrr']
+
+Sorting tests using a FieldIndex
+
+    >>> soup = getSoup(site, 'sortsoup')
+    >>> soup
+    <Soup at sortsoup>
+    
+    >>> import datetime
+    >>> delta = datetime.timedelta(1)
+    >>> date = datetime.datetime(2010, 1, 1)
+    >>> date
+    datetime.datetime(2010, 1, 1, 0, 0)
+    
+    >>> for i in range(365):
+    ...     id = soup.add(Record(date=date))
+    ...     date = date + delta
+    
+    >>> start = datetime.datetime(2010, 1, 1)
+    >>> end = datetime.datetime(2010, 1, 31)
+    >>> res = soup.query(date=(start, end), _sort_index='date', _reverse=True)
+    >>> for item in res:
+    ...     print item.date
+    2010-01-31 00:00:00
+    2010-01-30 00:00:00
+    2010-01-29 00:00:00
+    2010-01-28 00:00:00
+    2010-01-27 00:00:00
+    2010-01-26 00:00:00
+    2010-01-25 00:00:00
+    2010-01-24 00:00:00
+    2010-01-23 00:00:00
+    2010-01-22 00:00:00
+    2010-01-21 00:00:00
+    2010-01-20 00:00:00
+    2010-01-19 00:00:00
+    2010-01-18 00:00:00
+    2010-01-17 00:00:00
+    2010-01-16 00:00:00
+    2010-01-15 00:00:00
+    2010-01-14 00:00:00
+    2010-01-13 00:00:00
+    2010-01-12 00:00:00
+    2010-01-11 00:00:00
+    2010-01-10 00:00:00
+    2010-01-09 00:00:00
+    2010-01-08 00:00:00
+    2010-01-07 00:00:00
+    2010-01-06 00:00:00
+    2010-01-05 00:00:00
+    2010-01-04 00:00:00
+    2010-01-03 00:00:00
+    2010-01-02 00:00:00
+    2010-01-01 00:00:00

@@ -1,0 +1,100 @@
+
+Changes
+=======
+
+2.4
+---
+
+- Add GenericSetup profile and register soup-controlpanel as configlet.
+  Only configure if Products.CMFPlone is installed.
+  2011-01-12 - rnix
+- Create browser package and move browser related stuff there.
+  2011-01-12 - rnix
+- adopt documentation at some places.
+  2010-12-17 - rnix
+- add some sorting tests.
+  2010-12-17 - rnix
+
+2.3.2
+-----
+
+- return search result of txng wrapper as IFSet.
+  2010-12-17 - rnix
+- only modify query of FieldIndex if not already tuple.
+  2010-12-17 - rnix
+
+2.3.1
+-----
+
+- do not import ting interfaces to make cornerstone.soup work without
+  textindexng3.
+  2010-12-16 - rnix
+
+2.3
+---
+
+- fixed move code if empty soup is moved.
+  2010-12-16 - rnix
+- implemented clear function.
+  2010-12-16 - rnix
+- add text index NG3 support.
+  2010-12-16 - rnix
+
+2.2
+---
+
+- added mechanism to point soups to a path with an existing soup, so 
+  mount points can be used from several sites. Also overhauled UI of 
+  control panel and added more information what happens on mount or 
+  move.
+  2010-11-16 - jensens
+
+2.1
+---
+
+- added working move mechanism.
+  2010-09-09 - jensens, rnix
+- added deepcopy support.
+  2010-09-09 - jensens
+- added length support for SoupData using BTree's Length.
+  2010-09-08 - jensens
+- overhauled control panel UI.
+  2010-09-08 - jensens
+- fix query bug. only convert single value to 2-tuple when search key
+  refers to FieldIndex instance.
+  2010-07-20 - rnix
+- consider ``sort_index``, ``limit`` and ``reverse`` as query 
+  kwargs.
+  2010-07-20 - rnix
+
+2.0
+---
+
+- change API.
+  2010-06-18 - rnix
+- change storage strategy.
+  2010-06-18 - rnix
+
+1.0
+---
+
+- complete tests.
+  2009-12-02 - rnix
+- remove IIntIds and INameChooser dependencies.
+  2009-12-02 - rnix, jensens
+
+1.0b2
+-----
+
+- change namechoosing of records. Use ``uuid.uuid4()``.
+  2009-10-01 - rnix
+- add ``lazy`` function for querying huge results.
+  2009-10-01 - rnix
+- yield query result instead of collect in a list.
+  2009-09-29 - rnix
+
+1.0b1
+-----
+
+- initial work.
+  rnix, jensens
