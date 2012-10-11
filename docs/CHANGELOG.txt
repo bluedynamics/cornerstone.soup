@@ -2,6 +2,12 @@
 Changes
 =======
 
+2.4.1.1
+-------
+
+- solve packaging problem
+  2012-10-11 - jensens
+
 2.4.1
 -----
 

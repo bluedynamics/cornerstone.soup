@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = "2.4"
+version = "2.4.1.1"
 shortdesc ="Container with queryable Records for Zope 2"
 longdesc = open(os.path.join(os.path.dirname(__file__), 'README.txt')).read() 
 longdesc += open(os.path.join(os.path.dirname(__file__), 'docs', 'CHANGELOG.txt')).read()
